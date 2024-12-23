@@ -60,12 +60,12 @@ public class LargeObjectValidation {
                         return new AwsCredentials() {
                             @Override
                             public String accessKeyId() {
-                                return Constants.ACCESS_KEY;
+                                return Constants.ACCESS_KEY; // faça a sua configuração
                             }
  
                             @Override
                             public String secretAccessKey() {
-                                return Constants.SECRET;
+                                return Constants.SECRET; // faça a sua configuração
                             }
                         };
                     }

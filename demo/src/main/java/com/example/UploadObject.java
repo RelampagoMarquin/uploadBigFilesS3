@@ -1,52 +1,77 @@
 package com.example;
 
-// import com.amazonaws.AmazonServiceException;
-// import com.amazonaws.SdkClientException;
-// import com.amazonaws.regions.Regions;
-// import software.amazon.awssdk.services.s3.AmazonS3;
-// import software.amazon.awssdk.services.s3.AmazonS3ClientBuilder;
-// import software.amazon.awssdk.services.s3.model.ObjectMetadata;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.regions.Region;
 import java.io.File;
 import java.io.IOException;
 
 public class UploadObject {
 
     public static void main(String[] args) throws IOException {
-        Regions clientRegion = Regions.DEFAULT_REGION;
+        Region clientRegion = Region.US_EAST_1;  // Substitua com sua região
         String bucketName = "*** Bucket name ***";
         String stringObjKeyName = "*** String object key name ***";
         String fileObjKeyName = "*** File object key name ***";
         String fileName = "*** Path to file to upload ***";
 
         try {
-            // This code expects that you have AWS credentials set up per:
-            // https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/setup-credentials.html
-            AmazonS3 s3Client = AmazonS3ClientBuilder.standard()
-                    .withRegion(clientRegion)
+            // Criação do cliente S3
+            S3Client s3Client = S3Client.builder()
+                    .region(clientRegion)
                     .build();
 
-            // Upload a text string as a new object.
-            s3Client.putObject(bucketName, stringObjKeyName, "Uploaded String Object");
+            // Verificando se o arquivo já existe no bucket
+            if (doesFileExist(s3Client, bucketName, fileObjKeyName)) {
+                System.out.println("O arquivo com o nome '" + fileObjKeyName + "' já existe no bucket.");
+            } else {
+                System.out.println("O arquivo com o nome '" + fileObjKeyName + "' não existe no bucket.");
+                
+                // Fazendo upload de uma string (exemplo)
+                PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                        .bucket(bucketName)
+                        .key(stringObjKeyName)
+                        .build();
+                s3Client.putObject(putObjectRequest, RequestBody.fromString("Uploaded String Object"));
 
-            // Upload a file as a new object with ContentType and title specified.
-            PutObjectRequest request = new PutObjectRequest(bucketName, fileObjKeyName, new File(fileName));
-            ObjectMetadata metadata = new ObjectMetadata();
-            metadata.setContentType("plain/text");
-            metadata.addUserMetadata("title", "someTitle");
-            request.setMetadata(metadata);
-            s3Client.putObject(request);
-        } catch (AmazonServiceException e) {
-            // The call was transmitted successfully, but Amazon S3 couldn't process
-            // it, so it returned an error response.
+                // Fazendo upload de um arquivo
+                File file = new File(fileName);
+                putObjectRequest = PutObjectRequest.builder()
+                        .bucket(bucketName)
+                        .key(fileObjKeyName)
+                        .build();
+                s3Client.putObject(putObjectRequest, RequestBody.fromFile(file));
+                System.out.println("Arquivo enviado com sucesso!");
+            }
+        } catch (S3Exception e) {
+            // Exceções específicas do S3
             e.printStackTrace();
-        } catch (SdkClientException e) {
-            // Amazon S3 couldn't be contacted for a response, or the client
-            // couldn't parse the response from Amazon S3.
+        } catch (Exception e) {
+            // Exceções gerais do SDK
             e.printStackTrace();
         }
     }
-}
 
+    // Verifica se o arquivo existe usando o headObject
+    private static boolean doesFileExist(S3Client s3Client, String bucketName, String fileName) {
+        try {
+            HeadObjectRequest headObjectRequest = HeadObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(fileName)
+                    .build();
+            s3Client.headObject(headObjectRequest);  // Se o arquivo existir, não gerará exceção
+            return true;
+        } catch (S3Exception e) {
+            // Se o erro for 404, significa que o arquivo não existe
+            if (e.statusCode() == 404) {
+                return false;
+            }
+            // Lançar exceção caso seja outro tipo de erro
+            throw e;
+        }
+    }
+}
 
