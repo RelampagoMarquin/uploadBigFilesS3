@@ -9,6 +9,7 @@
     <version>1.0-SNAPSHOT</version>
 
 <dependencies>
+
         <!-- Dependência para AWS SDK v2 (usado para AmazonS3ClientBuilder) -->
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
