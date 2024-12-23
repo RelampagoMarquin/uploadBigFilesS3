@@ -117,6 +117,7 @@ public class Main implements RequestHandler<Map<String, Object>, Map<String, Str
         }
 
         // Salva o arquivo no S3
+        Map<String, String> response = new HashMap<>();
         try {
             String fileName = numNota + ".xml";
             String dir = cnpj + "/" + tipo + "/" + data + "/" + status + "/" + fileName;
@@ -130,8 +131,8 @@ public class Main implements RequestHandler<Map<String, Object>, Map<String, Str
             throw new RuntimeException("Erro ao salvar dado no S3: " + e.getMessage(), e);
         }
 
-        Map<String, String> response = new HashMap<>();
-        response.put("code", "XML SALVO");
+        response.put("code", "200");
+        response.put("Mensagem", "XML SALVO");
 
         return response;
     }
