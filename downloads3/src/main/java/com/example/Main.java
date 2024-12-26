@@ -103,11 +103,12 @@ public class Main implements RequestHandler<Map<String, Object>, Map<String, Obj
 
         String base64File = Base64.getEncoder().encodeToString(fileContent);
 
+        String zipFileName = cnpj + "-"+ tipo + "-" + data + ".zip";
         // Retorna o arquivo ZIP em Base64
         response.put("statusCode", 200);
         response.put("body", base64File);
         response.put("isBase64Encoded", true);
-        response.put("headers", Map.of("Content-Type", "application/zip"));
+        response.put("headers", Map.of("Content-Type", "application/zip", "Content-Disposition", "attachment; filename=\"" + zipFileName + "\""));
         return response;
     }
 }
