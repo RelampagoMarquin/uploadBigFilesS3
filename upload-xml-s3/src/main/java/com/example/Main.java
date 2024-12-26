@@ -1,4 +1,4 @@
-package com.teste;
+package com.example;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.RuntimeJsonMappingException;
 
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.util.HashMap;
@@ -21,6 +22,9 @@ public class Main implements RequestHandler<Map<String, Object>, Map<String, Str
 
         // Instancia o cliente S3 da AWS
         final S3Client s3Client = S3Client.builder().build();
+
+        // Nome do bucket
+        final String bucketName = "skysoft-xml-upload-test";
 
         // Determina se a requisição é multipart
         boolean isMultipart = input.get("headers").toString().contains("multipart/form-data");
@@ -95,7 +99,7 @@ public class Main implements RequestHandler<Map<String, Object>, Map<String, Str
 
         String status = (String) bodyMap.get("status");
         if (status == null) {
-            throw new RuntimeJsonMappingException("Adicione o status (AUTORIZADA, CANCELADA, INUTILIZADA OU CONTINGENCIA)");
+            throw new RuntimeJsonMappingException("Adicione o status (AUTORIZADA, CANCELADA OU INUTILIZADA)");
         }
 
         String data = (String) bodyMap.get("data");
@@ -117,13 +121,30 @@ public class Main implements RequestHandler<Map<String, Object>, Map<String, Str
         }
 
         // Salva o arquivo no S3
+        String fileName = numNota + ".xml";
+        String key = cnpj + "/" + tipo + "/" + data + "/" + status + "/" + fileName;
+
+        // Verifica se existe uma nota com o mesmo num nas autorizadas
+        if(status.equals("CANCELADA") || status.equals("INUTILIZADA")){
+            // se exister deleta antes de adicionar a nova
+            String keyAux = cnpj + "/" + tipo + "/" + data + "/AUTORIZADA/" + fileName;
+            DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
+                .bucket(bucketName)
+                .key(keyAux)
+                .build();
+            try {
+                s3Client.deleteObject(deleteObjectRequest);
+            } catch (Exception e) {
+                System.err.println("Erro ao deletar o objeto: " + e.getMessage());
+            }
+        }
+
         Map<String, String> response = new HashMap<>();
         try {
-            String fileName = numNota + ".xml";
-            String dir = cnpj + "/" + tipo + "/" + data + "/" + status + "/" + fileName;
+            
             PutObjectRequest request = PutObjectRequest.builder()
-                .bucket("skysoft-xml-upload-test")
-                .key(dir)
+                .bucket(bucketName)
+                .key(key) // local armazenado vira a chave de acesso
                 .build();
 
             s3Client.putObject(request, RequestBody.fromBytes(fileBytes));
